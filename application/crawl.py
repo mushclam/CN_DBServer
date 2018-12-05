@@ -1,6 +1,7 @@
 import sqlite3
 import requests, json, yaml
 from bs4 import BeautifulSoup
+import getpass
 
 def crawl():
     conn = sqlite3.connect('crawl.db')
@@ -19,8 +20,10 @@ def crawl():
     with open("config.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
-    user_id = cfg['user_id']
-    password = cfg['password']
+    #user_id = cfg['user_id']
+    user_id = input('ID: ')
+    #password = cfg['password']
+    password = getpass.getpass('Password: ')
     keep_signed = cfg['keep_signed']
 
     # Login to college site
@@ -35,7 +38,9 @@ def crawl():
     status = res.status_code
     cookies = session.cookies.get_dict()
 
-    for page in range(1,3):
+    end_page = int(input("page: ")) + 1
+
+    for page in range(1,end_page):
         # Move to board page
         b_params = { 'mid' : 'Sub040203', 'page' : str(page) }
         b_res = session.get(url=url, params=b_params, cookies=cookies)
