@@ -4,20 +4,19 @@ import yaml
 from bs4 import BeautifulSoup
 import getpass
 import threading
+from datetime import datetime
+import time
+import os
+
+from flask import current_app, g
+from flask.cli import with_appcontext
+from .db import get_db
 
 def crawl():
     # connect with database
-    conn = sqlite3.connect('crawl.db')
+    # conn = sqlite3.connect('crawl.db')
+    conn = get_db()
     # if article table is not exist, create table
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS article (
-            id INTEGER PRIMARY KEY,
-            type VARCHAR NOT NULL,
-            title TEXT NOT NULL,
-            author TEXT NOT NULL,
-            time TEXT NOT NULL,
-            content TEXT,
-            CHECK (type in ('normal', 'notice')));''')
     # found last updated time
     cursor = conn.execute('SELECT time FROM article ORDER BY time DESC')
     row = cursor.fetchone()
@@ -27,7 +26,7 @@ def crawl():
         last_update = ''
 
     # Read login config file
-    with open("config.yml", 'r') as ymlfile:
+    with open(current_app.config['CONFIG'], 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
     user_id = cfg['user_id']
@@ -53,8 +52,9 @@ def crawl():
     if status == 200:
 
         #end_page = int(input("page: ")) + 1
-        end_page = 11
+        end_page = 10 + 1
 
+        print('[Crawling Start]')
         for page in range(1,end_page):
             # Move to board page
             b_params = { 'mid' : 'Sub040203', 'page' : str(page) }
@@ -90,25 +90,36 @@ def crawl():
                         article_area = a_soup.find("div", {"class":"board_read"})
             
                         header_area = article_area.find("div", {"class":"read_header"})
+                        body_area = article_area.find("div", {"class":"read_body"})
+
                         a_title = header_area.find("h1").find("a").text.strip()
                         a_meta = header_area.find("p", {"class":"meta"})
                         a_author = a_meta.find("span", {"class":"author"}).find("a").text.strip()
                         a_time = a_meta.find("span", {"class":"time"}).text.strip()
                         a_count = a_meta.find("span", {"class":"read_count"}).text.strip()
+                        a_body = str(body_area)
 
                         # if timestamp of last article on site is same or smaller than last timestamp of db
                         # then not download data of website
                         if (a_time <= last_update):
-                            print(last_update)
-                            print('Already Lastest State!')
+                            print('[Already Lastest State: ' + last_update + ']')
                             flag = True
                             break
-            
+
+                        """
+                        dup = conn.execute('SELECT title FROM article WHERE time = ?',
+                                (a_time,)
+                            ).fetchone()
+                        if dup is not None:
+                            print('[Duplicated]')
+                            return
+                        """
+                        
                         conn.execute('''
-                            INSERT INTO article (type, title, author, time)
-                            VALUES (?, ?, ?, ?)
+                            INSERT INTO article (type, title, author, time, body)
+                            VALUES (?, ?, ?, ?, ?)
                             ''',
-                            (a_type, a_title, a_author, a_time)
+                            (a_type, a_title, a_author, a_time, a_body)
                         )
                         conn.commit()
 
