@@ -10,12 +10,12 @@ import os
 
 from flask import current_app, g
 from flask.cli import with_appcontext
-from .db import get_db
+from . import db
 
 def crawl():
     # connect with database
     # conn = sqlite3.connect('crawl.db')
-    conn = get_db()
+    conn = db.get_db()
     # if article table is not exist, create table
     # found last updated time
     cursor = conn.execute('SELECT time FROM article ORDER BY time DESC')
@@ -42,10 +42,13 @@ def crawl():
     headers = { 'Content-Type' : 'application/x-www-form-urlencoded', 'Referer' : r_url }
     data = {'user_id' : user_id, 'password' : password, 'keep_signed' : keep_signed }
 
-    session = requests.Session()
-    res = session.post(url=url, headers=headers, data=data, params=params)
-    status = res.status_code
-    cookies = session.cookies.get_dict()
+    if cookies is None:
+        session = requests.Session()
+        res = session.post(url=url, headers=headers, data=data, params=params)
+        status = res.status_code
+        cookies = session.cookies.get_dict()
+
+    g.cookies = cookies
 
     flag = False
     # if logged in successfully, load board content
@@ -104,7 +107,7 @@ def crawl():
                         if (a_time <= last_update):
                             print('[Already Lastest State: ' + last_update + ']')
                             flag = True
-                            break
+                            return
 
                         """
                         dup = conn.execute('SELECT title FROM article WHERE time = ?',
