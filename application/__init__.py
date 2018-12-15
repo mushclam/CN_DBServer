@@ -70,3 +70,6 @@ def create_app(test_config=None):
     api.add_resource(CreateUser, '/user')
 
     return app
+
+if __name__=='__main__':
+    app.run(host='0.0.0.0')
