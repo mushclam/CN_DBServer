@@ -42,13 +42,14 @@ def crawl():
     headers = { 'Content-Type' : 'application/x-www-form-urlencoded', 'Referer' : r_url }
     data = {'user_id' : user_id, 'password' : password, 'keep_signed' : keep_signed }
 
-    if cookies is None:
+    if 'cookies' not in g:
         session = requests.Session()
         res = session.post(url=url, headers=headers, data=data, params=params)
         status = res.status_code
         cookies = session.cookies.get_dict()
-
-    g.cookies = cookies
+        g.cookies = cookies
+    else:
+        cookies = g.cookies
 
     flag = False
     # if logged in successfully, load board content
@@ -129,6 +130,9 @@ def crawl():
             if flag:
                 break
             print('Crawling for page [' + str(page) + '] is Completed!')
+    else:
+        g.pop('cookies', None)
+
     if flag == False:
         print('Crawling is Done!')
 
