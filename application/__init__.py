@@ -6,6 +6,7 @@ import atexit
 from flask import (
         Flask, url_for, request, render_template, session, redirect, escape, g, flash, abort,_app_ctx_stack
     )
+from flask_restful import Resource, Api, reqparse
 
 POOL_TIME = 60
 
@@ -20,6 +21,7 @@ def create_app(test_config=None):
         DATABASE=os.path.join(app.instance_path, 'flaskr.sqlite'),
         CONFIG=os.path.join(app.instance_path, 'config.yml')
     )
+    api = Api(app)
 
     if test_config is None:
         # Load the instance config, if it exists, when not testing
@@ -39,11 +41,15 @@ def create_app(test_config=None):
     def hello():
         return 'Hello, World!'
 
+    class CreateUser(Resource):
+        def post(self):
+            return {'status':'success'}
+
     from . import db
     db.init_app(app)
     
-    from . import test
-    app.register_blueprint(test.bp)
+    from . import board
+    app.register_blueprint(board.bp)
 
     from . import crawl
     def interrupt():
@@ -60,5 +66,7 @@ def create_app(test_config=None):
 
     loopCrawl()
     atexit.register(interrupt)
+
+    api.add_resource(CreateUser, '/user')
 
     return app
